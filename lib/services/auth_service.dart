@@ -3,20 +3,72 @@ import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/models.dart';
 
-class AuthService extends ChangeNotifier {
+// Strategy Pattern: Define diferentes estratégias de autenticação
+// - AuthStrategy: Interface abstrata para diferentes métodos de login
+// - OAuth2PasswordStrategy: Estratégia padrão usando OAuth2 password flow
+// - AlternativeLoginStrategy: Estratégia alternativa para casos de falha CORS
+abstract class AuthStrategy {  // Interface comum para estratégias
+  Future<Map<String, dynamic>> authenticate(String email, String password, Dio dio);  // Método contrato
+}
+
+class OAuth2PasswordStrategy implements AuthStrategy {  // Implementação concreta da estratégia padrão
+  @override
+  Future<Map<String, dynamic>> authenticate(String email, String password, Dio dio) async {
+    final response = await dio.post(  // Faz requisição HTTP POST
+      '/auth/login',  // Endpoint de login
+      data: {  // Dados no formato OAuth2
+        'grant_type': 'password',  // Tipo de grant
+        'username': email,  // Email como username
+        'password': password,  // Senha
+      },
+      options: Options(  // Configurações da requisição
+        contentType: 'application/x-www-form-urlencoded',  // Tipo de conteúdo
+        headers: {'Accept': 'application/json'},  // Aceita JSON
+      ),
+    );
+    return response.data;  // Retorna dados da resposta
+  }
+}
+
+class AlternativeLoginStrategy implements AuthStrategy {  // Estratégia alternativa
+  @override
+  Future<Map<String, dynamic>> authenticate(String email, String password, Dio dio) async {
+    final response = await dio.post(  // Requisição alternativa
+      '/auth/login',
+      data: 'grant_type=password&username=$email&password=$password',  // Formato query string
+      options: Options(
+        contentType: 'application/x-www-form-urlencoded',
+        headers: {'Accept': 'application/json'},
+      ),
+    );
+    return response.data;
+  }
+}
+
+// Observer Pattern: AuthService implementa o padrão Observer através da extensão de ChangeNotifier,
+// permitindo que widgets se inscrevam para notificações de mudanças no estado de autenticação.
+// Singleton Pattern: Garante que apenas uma instância do AuthService exista na aplicação.
+class AuthService extends ChangeNotifier {  // ChangeNotifier = Subject no Observer Pattern
+  static final AuthService _instance = AuthService._internal();  // Instância singleton única
   static const String baseUrl = 'http://localhost:8000'; // Ajuste para seu IP
-  static const String _tokenKey = 'auth_token';
-  static const String _userKey = 'current_user';
+  static const String _tokenKey = 'auth_token';  // Chave para armazenar token
+  static const String _userKey = 'current_user';  // Chave para armazenar usuário
 
-  String? _token;
-  User? _currentUser;
-  late Dio _dio;
-  SharedPreferences? _prefs;
-  bool _isInitialized = false;
+  String? _token;  // Estado: token de autenticação
+  User? _currentUser;  // Estado: usuário atual
+  late Dio _dio;  // Cliente HTTP
+  SharedPreferences? _prefs;  // Armazenamento local
+  bool _isInitialized = false;  // Flag de inicialização
+  late AuthStrategy _authStrategy;  // Estratégia atual de autenticação
 
-  AuthService() {
-    _dio = Dio();
-    _configureDio();
+  factory AuthService() {  // Factory constructor para singleton
+    return _instance;  // Sempre retorna a mesma instância
+  }
+
+  AuthService._internal() {  // Construtor privado
+    _dio = Dio();  // Inicializa cliente HTTP
+    _authStrategy = OAuth2PasswordStrategy();  // Define estratégia padrão
+    _configureDio();  // Configura cliente HTTP
   }
 
   /// Inicializa o SharedPreferences e carrega dados salvos
@@ -137,87 +189,53 @@ class AuthService extends ChangeNotifier {
 
   Future<bool> login(String email, String password) async {
     try {
-      // Primeira tentativa: POST com form-urlencoded
-      final response = await _dio.post(
-        '/auth/login',
-        data: {
-          'grant_type': 'password',
-          'username': email,
-          'password': password,
-        },
-        options: Options(
-          contentType: 'application/x-www-form-urlencoded',
-          headers: {'Accept': 'application/json'},
-          // Força a não usar preflight request
-          method: 'POST',
-        ),
-      );
+      // Strategy Pattern: Tenta com a estratégia padrão de autenticação
+      final data = await _authStrategy.authenticate(email, password, _dio);  // Executa estratégia atual
 
-      if (response.statusCode == 200) {
-        final data = response.data;
-        _token = data['access_token'];
-
-        // Salva o token no localStorage
-        await _saveAuth();
-
-        // Buscar dados do usuário atual
-        await _fetchCurrentUser();
-
-        notifyListeners();
-        return true;
+      if (data['access_token'] != null) {  // Se resposta contém token (login OK)
+        _token = data['access_token'];  // Armazena token no estado
+        await _saveAuth();  // Persiste token no SharedPreferences
+        await _fetchCurrentUser();  // Busca dados completos do usuário
+        notifyListeners();  // Observer Pattern: Notifica widgets sobre mudança de autenticação
+        return true;  // Retorna sucesso
       }
-      return false;
+      return false;  // Falha: resposta sem token
     } catch (e) {
-      print('Erro no login: $e');
-      if (e is DioException) {
+      print('Erro no login com estratégia padrão: $e');
+      if (e is DioException) {  // Se erro de rede/HTTP
         print('Dio Error: ${e.message}');
         print('Response: ${e.response?.data}');
 
-        // Se for erro de CORS, tentar abordagem alternativa
+        // Strategy Pattern: Se erro de CORS/conexão, tenta estratégia alternativa
         if (e.type == DioExceptionType.connectionError ||
             e.message?.contains('CORS') == true) {
-          return await _tryAlternativeLogin(email, password);
+          return await _tryAlternativeLogin(email, password);  // Troca para estratégia alternativa
         }
       }
-      return false;
+      return false;  // Falha irrecuperável
     }
   }
 
   Future<bool> _tryAlternativeLogin(String email, String password) async {
     try {
       print('Tentando login alternativo...');
+      _authStrategy = AlternativeLoginStrategy(); // Strategy Pattern: Muda para estratégia alternativa
+      
+      final data = await _authStrategy.authenticate(email, password, _dio);  // Executa estratégia alternativa
 
-      // Criar uma nova instância do Dio com configurações simples
-      final simpleDio = Dio();
-      simpleDio.options.baseUrl = baseUrl;
-      simpleDio.options.connectTimeout = const Duration(seconds: 30);
-      simpleDio.options.receiveTimeout = const Duration(seconds: 30);
-
-      // Tentar com headers mínimos
-      final response = await simpleDio.post(
-        '/auth/login',
-        data: 'grant_type=password&username=$email&password=$password',
-        options: Options(
-          contentType: 'application/x-www-form-urlencoded',
-          headers: {'Accept': 'application/json'},
-        ),
-      );
-
-      if (response.statusCode == 200) {
-        final data = response.data;
+      if (data['access_token'] != null) {
         _token = data['access_token'];
-
-        // Salva o token no localStorage
         await _saveAuth();
-
         await _fetchCurrentUser();
-        notifyListeners();
+        notifyListeners();  // Observer Pattern: Notifica mudança de estado
         return true;
       }
       return false;
     } catch (e) {
       print('Erro no login alternativo: $e');
       return false;
+    } finally {
+      _authStrategy = OAuth2PasswordStrategy(); // Strategy Pattern: Restaura estratégia padrão
     }
   }
 

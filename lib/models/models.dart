@@ -1,82 +1,89 @@
+// Adapter Pattern: Os métodos fromJson e toJson adaptam os dados JSON da API para objetos Dart e vice-versa,
+// permitindo que a aplicação trabalhe com objetos tipados em vez de mapas JSON crus.
+// - fromJson: Converte Map<String, dynamic> (JSON) para objeto Dart tipado
+// - toJson: Converte objeto Dart para Map<String, dynamic> (JSON serializável)
 class User {
-  final int id;
-  final String email;
-  final String? fullName;
-  final String? profileImageUrl;
-  final String? profileImageBase64;
-  final Role role;
+  final int id;  // ID único do usuário
+  final String email;  // Email (único)
+  final String? fullName;  // Nome completo (opcional)
+  final String? profileImageUrl;  // URL da imagem de perfil
+  final String? profileImageBase64;  // Imagem em base64
+  final Role role;  // Role/perfil do usuário
 
-  User({
-    required this.id,
-    required this.email,
-    this.fullName,
-    this.profileImageUrl,
-    this.profileImageBase64,
-    required this.role,
+  User({  // Construtor com parâmetros nomeados
+    required this.id,  // ID obrigatório
+    required this.email,  // Email obrigatório
+    this.fullName,  // Nome opcional
+    this.profileImageUrl,  // URL opcional
+    this.profileImageBase64,  // Base64 opcional
+    required this.role,  // Role obrigatório
   });
 
-  factory User.fromJson(Map<String, dynamic> json) {
-    return User(
-      id: json['id'],
-      email: json['email'],
-      fullName: json['full_name'],
-      profileImageUrl: json['profile_image_url'],
-      profileImageBase64: json['profile_image_base64'],
-      role: Role.fromJson(json['role']),
+  // Adapter Pattern: Método factory que converte JSON da API para objeto User
+  factory User.fromJson(Map<String, dynamic> json) {  // Recebe Map do JSON
+    return User(  // Cria instância User com dados adaptados
+      id: json['id'],  // Adapta campo 'id' do JSON
+      email: json['email'],  // Adapta campo 'email'
+      fullName: json['full_name'],  // Adapta campo 'full_name' (pode ser null)
+      profileImageUrl: json['profile_image_url'],  // Adapta URL da imagem
+      profileImageBase64: json['profile_image_base64'],  // Adapta base64
+      role: Role.fromJson(json['role']),  // Adapta objeto Role aninhado
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'email': email,
-      'full_name': fullName,
-      'profile_image_url': profileImageUrl,
-      'profile_image_base64': profileImageBase64,
-      'role_id': role.id,
+  // Adapter Pattern: Método que converte objeto User para JSON para envio à API
+  Map<String, dynamic> toJson() {  // Retorna Map para serialização
+    return {  // Cria Map com campos adaptados para JSON
+      'id': id,  // Campo 'id' adaptado
+      'email': email,  // Campo 'email' adaptado
+      'full_name': fullName,  // Campo 'full_name' (pode ser null)
+      'profile_image_url': profileImageUrl,  // URL adaptada
+      'profile_image_base64': profileImageBase64,  // Base64 adaptada
+      'role_id': role.id,  // Apenas ID do role (formato da API)
     };
   }
 }
 
 class UserCreate {
-  final String email;
-  final String password;
-  final String? fullName;
-  final String? profileImageUrl;
-  final String? profileImageBase64;
-  final int roleId;
+  final String email;  // Email do novo usuário
+  final String password;  // Senha do novo usuário
+  final String? fullName;  // Nome completo (opcional)
+  final String? profileImageUrl;  // URL da imagem de perfil
+  final String? profileImageBase64;  // Imagem em base64
+  final int roleId;  // ID do role a ser atribuído
 
-  UserCreate({
-    required this.email,
-    required this.password,
-    this.fullName,
-    this.profileImageUrl,
-    this.profileImageBase64,
-    required this.roleId,
+  UserCreate({  // Construtor para criação de usuário
+    required this.email,  // Email obrigatório
+    required this.password,  // Senha obrigatória
+    this.fullName,  // Nome opcional
+    this.profileImageUrl,  // URL opcional
+    this.profileImageBase64,  // Base64 opcional
+    required this.roleId,  // Role obrigatório
   });
 
-  Map<String, dynamic> toJson() {
-    return {
-      'email': email,
-      'password': password,
-      'full_name': fullName,
-      'profile_image_url': profileImageUrl,
-      'profile_image_base64': profileImageBase64,
-      'role_id': roleId,
+  // Adapter Pattern: Converte UserCreate para JSON para envio à API
+  Map<String, dynamic> toJson() {  // Retorna Map serializável
+    return {  // Map com campos no formato esperado pela API
+      'email': email,  // Campo 'email' adaptado
+      'password': password,  // Campo 'password' adaptado
+      'full_name': fullName,  // Campo 'full_name' (pode ser null)
+      'profile_image_url': profileImageUrl,  // URL adaptada
+      'profile_image_base64': profileImageBase64,  // Base64 adaptada
+      'role_id': roleId,  // ID do role adaptado
     };
   }
 }
 
 class UserUpdate {
-  final String? email;
-  final String? password;
-  final String? fullName;
-  final String? profileImageUrl;
-  final String? profileImageBase64;
-  final int? roleId;
+  final String? email;  // Email atualizado (opcional)
+  final String? password;  // Senha atualizada (opcional)
+  final String? fullName;  // Nome completo atualizado (opcional)
+  final String? profileImageUrl;  // URL da imagem atualizada (opcional)
+  final String? profileImageBase64;  // Imagem em base64 atualizada (opcional)
+  final int? roleId;  // ID do role atualizado (opcional)
 
-  UserUpdate({
-    this.email,
+  UserUpdate({  // Construtor para atualização de usuário
+    this.email,  // Todos os campos são opcionais
     this.password,
     this.fullName,
     this.profileImageUrl,
@@ -84,40 +91,51 @@ class UserUpdate {
     this.roleId,
   });
 
-  Map<String, dynamic> toJson() {
-    Map<String, dynamic> json = {};
-    if (email != null) json['email'] = email;
+  // Adapter Pattern: Converte UserUpdate para JSON para envio à API
+  Map<String, dynamic> toJson() {  // Retorna Map serializável
+    Map<String, dynamic> json = {};  // Map vazio inicialmente
+    if (email != null) json['email'] = email;  // Adiciona apenas campos não-nulos
     if (password != null) json['password'] = password;
     if (fullName != null) json['full_name'] = fullName;
     if (profileImageUrl != null) json['profile_image_url'] = profileImageUrl;
-    if (profileImageBase64 != null)
-      json['profile_image_base64'] = profileImageBase64;
+    if (profileImageBase64 != null) json['profile_image_base64'] = profileImageBase64;
     if (roleId != null) json['role_id'] = roleId;
-    return json;
+    return json;  // Retorna apenas campos que foram fornecidos
   }
 }
 
 class Role {
-  final int id;
-  final String name;
+  final int id;  // ID único do role
+  final String name;  // Nome do role (ex: 'admin', 'user')
 
-  Role({required this.id, required this.name});
+  Role({required this.id, required this.name});  // Construtor com ID e nome obrigatórios
 
-  factory Role.fromJson(Map<String, dynamic> json) {
-    return Role(id: json['id'], name: json['name']);
+  // Adapter Pattern: Factory que converte JSON da API para objeto Role
+  factory Role.fromJson(Map<String, dynamic> json) {  // Recebe Map do JSON da API
+    return Role(  // Cria Role com dados adaptados
+      id: json['id'],  // Adapta campo 'id' do JSON
+      name: json['name'],  // Adapta campo 'name' do JSON
+    );
   }
 
-  Map<String, dynamic> toJson() {
-    return {'id': id, 'name': name};
+  // Adapter Pattern: Converte Role para JSON para envio à API
+  Map<String, dynamic> toJson() {  // Retorna Map serializável
+    return {  // Map com campos no formato esperado pela API
+      'id': id,  // ID do role
+      'name': name,  // Nome do role
+    };
   }
 }
 
 class RoleCreate {
-  final String name;
+  final String name;  // Nome do novo role
 
-  RoleCreate({required this.name});
+  RoleCreate({required this.name});  // Construtor com nome obrigatório
 
-  Map<String, dynamic> toJson() {
-    return {'name': name};
+  // Adapter Pattern: Converte RoleCreate para JSON para envio à API
+  Map<String, dynamic> toJson() {  // Retorna Map serializável
+    return {  // Map com campo no formato esperado pela API
+      'name': name,  // Campo 'name' adaptado
+    };
   }
 }
