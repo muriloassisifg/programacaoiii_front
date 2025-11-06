@@ -50,7 +50,7 @@ class AlternativeLoginStrategy implements AuthStrategy {  // Estratégia alterna
 // Singleton Pattern: Garante que apenas uma instância do AuthService exista na aplicação.
 class AuthService extends ChangeNotifier {  // ChangeNotifier = Subject no Observer Pattern
   static final AuthService _instance = AuthService._internal();  // Instância singleton única
-  static const String baseUrl = 'http://localhost:8000'; // Ajuste para seu IP
+  static const String baseUrl = Config.apiUrl; // Ajuste para seu IP
   static const String _tokenKey = 'auth_token';  // Chave para armazenar token
   static const String _userKey = 'current_user';  // Chave para armazenar usuário
 
