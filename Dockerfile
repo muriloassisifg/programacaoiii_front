@@ -1,19 +1,15 @@
 # Dockerfile para Flutter Web
-FROM debian:latest AS build-env
+FROM debian:stable-slim AS build-env
 
-# Instala dependências
+# Instala dependências necessárias para Flutter
 RUN apt-get update && apt-get install -y \
     curl \
     git \
     wget \
     unzip \
-    libgconf-2-4 \
-    gdb \
-    libstdc++6 \
+    xz-utils \
+    zip \
     libglu1-mesa \
-    fonts-droid-fallback \
-    lib32stdc++6 \
-    python3 \
     && rm -rf /var/lib/apt/lists/*
 
 # Clone o Flutter SDK
