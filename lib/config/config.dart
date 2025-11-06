@@ -4,7 +4,7 @@ import 'dart:html' as html;
 
 class Config {
   // URLs da API
-  static const String productionApiUrl = 'https://programacaiii-api.onrender.com';
+  static const String productionApiUrl = 'https://programacaiii-api-1.onrender.com';
   static const String developmentApiUrl = 'http://localhost:8000';
   
   // URL atual baseada na URL do navegador
