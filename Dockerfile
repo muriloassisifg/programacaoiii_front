@@ -15,7 +15,7 @@ RUN flutter pub get
 COPY . .
 
 # Build da aplicação web para produção
-RUN flutter build web --release --web-renderer canvaskit
+RUN flutter build web --release
 
 # Stage 2: Servidor Nginx para servir os arquivos estáticos
 FROM nginx:alpine
